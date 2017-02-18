@@ -29,23 +29,19 @@ def restart_if_modified():
 
 
 def get_disk():
-    rootdir_pattern = re.compile('^.*?/devices')
+    root_dir_pattern = re.compile('^.*?/devices')
     internal_devices = []
 
     def device_state(name):
-        """
-        Follow pmount policy to determine whether a device is removable or internal.
-        """
         with open('/sys/block/%s/device/block/%s/removable' % (name, name)) as f:
             if f.read(1) == '1':
                 return
-
-        path = rootdir_pattern.sub('', os.readlink('/sys/block/%s' % name))
-        hotplug_buses = ("usb", "ieee1394", "mmc", "pcmcia", "firewire")
-        for bus in hotplug_buses:
+        path = root_dir_pattern.sub('', os.readlink('/sys/block/%s' % name))
+        hot_plug_buses = ("usb", "ieee1394", "mmc", "pcmcia", "firewire")
+        for bus in hot_plug_buses:
             if os.path.exists('/sys/bus/%s' % bus):
                 for device_bus in os.listdir('/sys/bus/%s/devices' % bus):
-                    device_link = rootdir_pattern.sub('', os.readlink(
+                    device_link = root_dir_pattern.sub('', os.readlink(
                         '/sys/bus/%s/devices/%s' % (bus, device_bus)))
                     if re.search(device_link, path):
                         return
@@ -60,29 +56,7 @@ def get_disk():
 
 
 def hddinfo(hddev):
-    if os.geteuid() > 0:
-        print("ERROR: Must be root to use")
-
-    with open(hddev, "rb") as fd:
-        # tediously derived from the monster struct defined in <hdreg.h>
-        # see comment at end of file to verify
-        hd_driveid_format_str = "@ 10H 20s 3H 8s 40s 2B H 2B H 4B 6H 2B I 36H I Q 152H"
-        # Also from <hdreg.h>
-        HDIO_GET_IDENTITY = 0x030d
-        # How big a buffer do we need?
-        sizeof_hd_driveid = struct.calcsize(hd_driveid_format_str)
-
-        # ensure our format string is the correct size
-        # 512 is extracted using sizeof(struct hd_id) in the c code
-        assert sizeof_hd_driveid == 512
-
-        # Call native function
-        buf = fcntl.ioctl(fd, HDIO_GET_IDENTITY, " " * sizeof_hd_driveid)
-        fields = struct.unpack(hd_driveid_format_str, buf)
-        serial_no = fields[10].strip()
-        model = fields[15].strip()
-        print("Hard Disk Model: %s" % model)
-        print("  Serial Number: %s" % serial_no)
+    pass
 
 while True:
     check_for_update()
