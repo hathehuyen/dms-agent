@@ -1,5 +1,5 @@
 # coding: utf-8
-from subprocess import call
+from subprocess import check_output
 import os
 import json
 import itertools
@@ -7,45 +7,46 @@ import itertools
 
 def get_hdd_info():
     """
-    Run "inxi -Dxx" command get HDD info and put to a text file
+    Run "inxi -Dxx" command get HDD info and put to a variable
 
     :return: Path of the text file
     :rtype: str
     """
+    inxi_output = None
     # Command get Serial Number
-    arg1 = ["inxi -Dxx > inxi.txt"]
+    arg1 = ['inxi', '-Dxx']
     try:
-        call(arg1)
+        inxi_output = check_output(arg1)
     except Exception as ex:
         print "{}".format(ex)
 
     # return path files
-    inxi_path = os.path.dirname(os.path.realpath(__file__)) + "/inxi.txt"
-    return inxi_path
+    return inxi_output
 
 
 def parse_file():
     """
-    Parse file text get HDD info, convert to JSON
+    Parse a variable get HDD info, convert to JSON
 
     :return: HDD info in Json type
     :rtype: json
     """
     data = {}
-    inxi_hand = None
-    inxi_path = get_hdd_info()
+    inxi_output = get_hdd_info()
+
     try:
         # Read HDD information
-        inxi_hand = open(inxi_path)
-        for line in inxi_hand:
-            if line.strip().startswith("Drives"):
+        for line in inxi_output.split('\n'):
+            if line == "":
+                break
+            elif line.startswith("Drives"):
                 data[line.strip().split(":")[1].strip()] = line.strip().split(":")[2].strip()
             else:
-                data[line.strip().split()[2]] = dict(itertools.izip_longest(*[iter(line.strip().split()[1:])] * 2, fillvalue=""))
+                data[line.strip().split()[2]] = dict(
+                    itertools.izip_longest(*[iter(line.strip().split()[1:])] * 2, fillvalue=""))
 
-    except IOError as io_error:
-        inxi_hand.close()
-        print "{}".format(io_error)
+    except Exception as ex:
+        print "{}".format(ex)
     return json.dumps(data)
 
 
